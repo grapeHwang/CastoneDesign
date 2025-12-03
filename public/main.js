@@ -45,6 +45,7 @@ world.broadphase = new CANNON.NaiveBroadphase();
 // ==========================================
 let planets = []; 
 let currentScenarioType = ''; 
+let currentControlsCleanup = null; // 월식 시나리오 카메라 컨트롤을 위해 변수 추가
 
 // ==========================================
 // 4. 유틸리티 함수들
@@ -61,6 +62,12 @@ function resetScene() {
 // (2) AI 데이터 + 시나리오 파일 결합 (★ 디버깅 핵심 구역)
 async function createSceneFromData(aiData) {
     resetScene(); 
+
+    // ⚠️ 이전 컨트롤 정리 (Scene 전환 시 필요)
+    if (currentControlsCleanup) {
+        currentControlsCleanup();
+        currentControlsCleanup = null;
+    }
 
     // 🔍 [디버그 3] 데이터 수신 확인
     console.log("📦 [Debug] 3. createSceneFromData 함수 진입. 받은 데이터:", aiData);
@@ -124,7 +131,7 @@ async function createSceneFromData(aiData) {
     }
 
     // 시나리오 파일에서 반환된 데이터 적용
-    if (setupData) {
+   if (setupData) {
         if (setupData.planets && setupData.planets.length > 0) {
             console.log(`✅ [Debug] 6. 파일에서 행성 ${setupData.planets.length}개 로드 성공`);
             planets = setupData.planets;
@@ -135,7 +142,13 @@ async function createSceneFromData(aiData) {
         const camPos = setupData.cameraPosition || aiData.cameraPosition;
         if (camPos) {
             camera.position.set(camPos.x, camPos.y, camPos.z);
-            camera.lookAt(0, 0, 0);
+            camera.lookAt(0, 0, 0); // 초기 카메라는 중앙을 바라봅니다.
+        }
+        
+        // ✨ 추가: Scene에서 반환된 컨트롤 설정 함수를 실행합니다.
+        if (setupData.setupControls && typeof setupData.setupControls === 'function') {
+            // setupControls 함수에 camera 객체를 전달하고, cleanup 함수를 저장합니다.
+            currentControlsCleanup = setupData.setupControls(camera, controls); 
         }
     }
 }
@@ -228,6 +241,18 @@ function animate() {
 
     applyGravity(); 
     world.step(1 / 60);
+
+    // ✨ 복구된 부분: 행성 업데이트 및 제거 루프
+    for (let i = planets.length - 1; i >= 0; i--) {
+        const p = planets[i];
+        p.update(deltaTime); // ⬅️ 행성의 Mesh와 Body 위치 동기화
+
+        if (p.isDead) {
+            p.dispose();
+            planets.splice(i, 1);
+        }
+    }
+    // ✨ 복구된 부분 끝
 
     controls.update();
     renderer.render(scene, camera);
