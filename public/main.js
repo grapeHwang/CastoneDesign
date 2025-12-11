@@ -99,7 +99,7 @@ async function createSceneFromData(aiData) {
         case 'solar_eclipse':
             console.log("🌑 [Debug] 5. 'solar_eclipse' 케이스 당첨!");
             // ✨ 분리된 개기일식 함수 호출
-            setupData = initSolarEclipseScene(scene, world, loader, aiData); 
+            setupData = initSolarEclipseScene(scene, world, loader, aiData, ambientLight); 
             break;
         case 'lunar_eclipse':
             console.log("🌕 [Debug] 5. 'lunar_eclipse' 케이스 당첨!");
@@ -148,7 +148,7 @@ async function createSceneFromData(aiData) {
         // ✨ 추가: Scene에서 반환된 컨트롤 설정 함수를 실행합니다.
         if (setupData.setupControls && typeof setupData.setupControls === 'function') {
             // setupControls 함수에 camera 객체를 전달하고, cleanup 함수를 저장합니다.
-            currentControlsCleanup = setupData.setupControls(camera, controls); 
+            currentControlsCleanup = setupData.setupControls(camera, controls, ambientLight); 
         }
     }
 }
