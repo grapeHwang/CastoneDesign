@@ -47,11 +47,9 @@
 </head>
 <body>
     <div class="ui">
-        <input id="user-input" placeholder="예: 지구와 목성 충돌시켜줘" style="width: 250px; padding: 5px;" />
-        
-        <button id="send-btn" style="padding: 5px 10px; cursor: pointer;">생성</button>
-        
-        <div id="ai-status" style="margin-top: 5px; font-size: 0.9em; color: #ddd;"></div>
+        <button id = "mic-btn">말하기 시작</button>
+        <div id="speech-output" style="margin-top: 10px; font-style: italic;">여기에 인식된 텍스트가 표시됩니다.</div>
+        <div id="ai-status">대기 중....</div>
     </div>
 
     <canvas id="three-canvas"></canvas>

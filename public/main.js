@@ -186,10 +186,90 @@ function applyGravity() {
 // 5. 사용자 입력 처리
 // ==========================================
 const inputField = document.getElementById('user-input'); 
+const micBtn = document.getElementById('mic-btn'); 
+const speechOutputDiv = document.getElementById('speech-output'); // 추가
 const sendBtn = document.getElementById('send-btn');    
 const statusDiv = document.getElementById('ai-status'); 
 
-async function handleUserRequest() {
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+// 브라우저에서 Speech API를 지원하는지 확인
+if (!SpeechRecognition) {
+    micBtn.disabled = true;
+    speechOutputDiv.innerText = "🚨 브라우저에서 음성 인식을 지원하지 않습니다.";
+}
+
+const recognition = new SpeechRecognition();
+recognition.continuous = false; // 한 번 말하면 중지
+recognition.lang = 'ko-KR'; // 한국어 설정
+recognition.interimResults = false; // 최종 결과만 반환
+
+// main.js (기존 handleUserRequest 함수를 대체합니다)
+
+// ✨ 3. 음성 인식 시작 및 처리 함수 정의
+function startListening() {
+    micBtn.disabled = true;
+    micBtn.innerText = "🔴 듣는 중...";
+    speechOutputDiv.innerText = "말씀하세요...";
+    statusDiv.innerText = "음성 입력 대기 중...";
+
+    recognition.start();
+}
+
+recognition.onresult = async (event) => {
+    // 음성 인식 결과에서 최종 텍스트 추출
+    const last = event.results.length - 1;
+    const text = event.results[last][0].transcript;
+    
+    speechOutputDiv.innerText = `인식된 텍스트: "${text}"`;
+    
+    if (text) {
+        // ✨ 기존 handleUserRequest의 핵심 로직을 재사용합니다.
+        await processRecognizedText(text); 
+    } else {
+        statusDiv.innerText = "❌ 음성을 인식하지 못했습니다.";
+    }
+};
+
+recognition.onend = () => {
+    micBtn.disabled = false;
+    micBtn.innerText = "🎙️ 말하기 시작";
+};
+
+recognition.onerror = (event) => {
+    console.error("🚨 음성 인식 오류:", event.error);
+    statusDiv.innerText = `🚨 음성 인식 오류: ${event.error}`;
+    micBtn.disabled = false;
+    micBtn.innerText = "🎙️ 말하기 시작";
+};
+
+// ✨ 4. 텍스트 처리 로직 분리 (기존 handleUserRequest에서 가져옴)
+async function processRecognizedText(text) {
+    try {
+        statusDiv.innerText = "AI가 생각 중... 🤔";
+        
+        // 1. AI에게 질문
+        const scenarioData = await getJsonFromAI(text);
+        
+        // 2. 씬 구성
+        await createSceneFromData(scenarioData);
+
+        statusDiv.innerText = `✅ 적용 완료: ${scenarioData.scenarioType}`;
+        
+    } catch (error) {
+        console.error("🚨 [Error] 처리 중 오류 발생:", error);
+        statusDiv.innerText = "🚨 오류 발생! 콘솔을 확인하세요.";
+    } 
+}
+
+// ✨ 5. 이벤트 리스너 연결
+if (micBtn) {
+    micBtn.addEventListener('click', startListening);
+}
+
+// 기존 inputField 관련 로직은 제거하거나 주석 처리해야 합니다.
+
+/*async function handleUserRequest() {
     const text = inputField.value;
     // 🔍 [디버그 1] 버튼 클릭 확인
     console.log(`🖱️ [Debug] 1. 버튼 클릭됨. 입력값: "${text}"`);
@@ -225,7 +305,7 @@ if (sendBtn && inputField) {
     inputField.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleUserRequest();
     });
-}
+}*/
 
 // ==========================================
 // 6. 애니메이션 루프
