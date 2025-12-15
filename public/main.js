@@ -710,6 +710,99 @@ if (sendBtn) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 🎙️ Voice Input (Web Speech API) - mic-btn
+// ─────────────────────────────────────────────────────────────
+const micBtn = document.getElementById('mic-btn');
+
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition = null;
+let isListening = false;
+
+if (micBtn) {
+  if (!SpeechRecognition) {
+    // 브라우저 미지원
+    micBtn.disabled = true;
+    micBtn.title = '이 브라우저는 음성 인식(Web Speech API)을 지원하지 않습니다. (Chrome/Edge 권장)';
+    micBtn.style.opacity = '0.5';
+    console.warn('SpeechRecognition not supported in this browser.');
+  } else {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ko-KR';       // ✅ 한국어
+    recognition.interimResults = true; // ✅ 말하는 중간 텍스트도 표시
+    recognition.continuous = false;    // ✅ 한 번 말하면 종료
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      isListening = true;
+      micBtn.textContent = '🛑';
+      micBtn.style.background = '#ff5252';
+      statusDiv.innerText = '🎙️ 듣는 중... 말해줘!';
+    };
+
+    recognition.onresult = (event) => {
+      let finalText = '';
+      let interimText = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) finalText += transcript;
+        else interimText += transcript;
+      }
+
+      // ✅ 실시간 표시 (final 우선)
+      const text = (finalText || interimText || '').trim();
+      if (text) inputField.value = text;
+    };
+
+    recognition.onerror = (e) => {
+      console.warn('SpeechRecognition error:', e);
+
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        statusDiv.innerText = '🚫 마이크 권한이 필요해요. 브라우저에서 허용해줘!';
+      } else if (e.error === 'no-speech') {
+        statusDiv.innerText = '🎤 음성이 감지되지 않았어요. 다시 말해줘!';
+      } else {
+        statusDiv.innerText = `🚨 음성 인식 오류: ${e.error}`;
+      }
+    };
+
+    recognition.onend = async () => {
+      // onend는 정상 종료/중단/오류 후 모두 올 수 있음
+      const wasListening = isListening;
+
+      isListening = false;
+      micBtn.textContent = '🎙️';
+      micBtn.style.background = ''; // 기본 버튼색으로 복귀( CSS hover 유지 )
+      statusDiv.innerText = statusDiv.innerText || ' ';
+
+      // ✅ “듣다가 끝났고”, 텍스트가 있으면 자동 실행
+      const text = (inputField.value || '').trim();
+      if (wasListening && text) {
+        await handleUserRequest();
+      }
+    };
+
+    micBtn.addEventListener('click', () => {
+      if (!recognition) return;
+
+      // 시퀀스 모드/AI 실행 중엔 중복 입력 방지
+      if (sendBtn?.disabled || inputField?.disabled) return;
+
+      if (isListening) {
+        recognition.stop();
+      } else {
+        // ✅ 시작 전에 input 비우고 시작하면 깔끔
+        inputField.value = '';
+        recognition.start();
+      }
+    });
+  }
+}
+
+
+// ─────────────────────────────────────────────────────────────
 // Raycasting + 정보창
 // ─────────────────────────────────────────────────────────────
 const raycaster = new THREE.Raycaster();
